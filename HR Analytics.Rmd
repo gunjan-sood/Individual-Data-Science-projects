@@ -1,0 +1,51 @@
+---
+title: "HR Analytics"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Step 1:
+Understand the correlation among different independent variables
+
+```{r}
+library("corrplot")
+library("DT")
+HR_data <- read.csv("HR_comma_sep.csv",header = T,stringsAsFactors = F)
+cor_test <- cor(HR_data[1:6])
+corrplot(cor_test, method="circle")
+```
+
+Step 2:
+Calculate the probability of employee leaving the firm. We know our output variable is binary in nature - Will not leave (0) and Will leave (1). Thus we apply the binary logistic regression model to calculate the probability.
+
+Note: In this analysis, we are concerned only about individuals who has great last evaluation rating or has been with company for more than 4 years or have done more than 5 projects. Thus we form our training data according to those conditions
+
+```{r}
+training_data <- subset(HR_data,left=1)
+testing_data<- subset(HR_data,left==0&(last_evaluation >= 0.70 | time_spend_company >= 4 | number_project > 5))
+From_dataset <- testing_data$left
+left_model <- glm(left~satisfaction_level+average_montly_hours+time_spend_company+Work_accident,data=training_data,family=binomial)
+summary(left_model)
+```
+
+Step 3:
+We noticed that we reduced the Residual Deviance based on our model Which is good. Next we start to predict probability of leaving.
+
+```{r}
+HR_model_pred_prob <-predict(left_model,testing_data,type="response")
+model_pred_leave_status <- rep("0",7758)
+model_pred_leave_status[HR_model_pred_prob>0.5] <- "1"
+table(model_pred_leave_status,From_dataset)
+mean(model_pred_leave_status!=From_dataset)
+```
+
+
+Step 4: Show the employees with high probability of leaving in tabular form
+```{r}
+result1 <- cbind(testing_data,model_pred_leave_status)
+final_result <- cbind(result1,HR_model_pred_prob)
+datatable(final_result)
+```

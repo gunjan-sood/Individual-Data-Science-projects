@@ -1,0 +1,113 @@
+---
+title: "Visual Analysis with Automobile data"
+author: "Aditya Kharbanda"  
+date: "`r format(Sys.Date())`"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Analyzing Automobile data through R
+
+In this project I will be using some of the common R packages like PLYR and GGPLOT to analyze automobile data.
+
+Step 1: To load and examine the data
+
+
+```{r echo=FALSE}
+library(plyr)
+library(reshape2)
+library(ggplot2)
+vehicles <- read.csv(unzip("vehicles.csv.zip"),stringsAsFactors = F)
+```
+
+Step 2: Examine the first few rows to get a sense of the data
+```{r}
+str(vehicles)
+```
+
+I like to use str instead of Head. It is more concise specially when loading in data set which has lot of columns
+
+```{r}
+nrow(vehicles)
+ncol(vehicles)
+```
+
+Since we are only doing an analysis on Automatic vs Manual transmission, we would like to manipulate our data to represent it as such :-
+
+STEP 1: Take out missing values
+STEP 2: Substring the trany column to get only Auto or Manual
+
+```{r}
+vehicles$trany[vehicles$trany==" "] <- NA
+vehicles$trany2 <- ifelse(substr(vehicles$trany,1,4)=="Auto","Auto","Manual")
+table(vehicles$trany2)
+```
+
+Step 3: Once the initial analysis is done it is time to start asking the questions.
+
+'How MPG changes over time on average ?'
+
+-> Apply ddply function to get mpgByYear
+```{r}
+mpgByYear <- ddply(vehicles,~year,summarise,avgMPG=mean(comb08),avgHwy=mean(highway08))
+```
+
+-> Plot the Mileage By year using GGplot2
+```{r}
+MpgByYear<-ggplot(mpgByYear,aes(year,avgMPG))+geom_point()+geom_smooth()
+```
+
+## Including Plots
+
+```{r, echo=FALSE}
+plot(MpgByYear)
+```
+
+This is interesting, there has been tremendous increase in Mileage the last few years. Could it be that there were lot of non-gasoline cars or hybrid cars. Lets look at a similar view but just with gasoline cars
+
+```{r}
+table(vehicles$fuelType1)
+gasCars <- subset(vehicles,fuelType1 %in% c("Regular Gasoline", "Premium Gasoline", "Midgrade Gasoline") & fuelType2 == "" & atvType != "Hybrid")
+mpgByYear_Gas <- ddply(gasCars,~year,summarise,avgMPG_Gas=mean(comb08))
+mpgByYear_Gas<-ggplot(mpgByYear_Gas,aes(year,avgMPG_Gas))+geom_point()+geom_smooth()+ xlab("Year") + ylab("Average MPG") + ggtitle("Gasoline cars")
+```
+
+## Including Plots
+
+```{r, echo=FALSE}
+plot(mpgByYear_Gas)
+```
+
+May be it could be that few larger engine cars were made in recent years. Thus what we are essentially saying is large engine cars have less mileage. Lets test that out !
+```{r, echo=FALSE}
+gasCars$displ <- as.numeric(gasCars$displ)
+ggplot(gasCars, aes(displ, comb08)) + geom_point() + geom_smooth()
+```
+The relationship is clear, there is negative correlation between mileage and number of engines in car
+
+Now lets test if smaller engine cars were built in later years which would explain the sudden increase in mileage
+
+```{r, echo=FALSE}
+avgCarSize <- ddply(gasCars, ~year, summarise, avgDispl = mean(displ))
+avgCarSize_byYear<-ggplot(avgCarSize, aes(year, avgDispl)) + geom_point() + geom_smooth() + xlab("Year") + ylab("Average engine displacement (l)")
+```
+
+```{r, echo=FALSE}
+plot(avgCarSize_byYear)
+```
+
+Clearly there was a dip, now lets bring the two graphs together by using facets
+```{r, echo=FALSE}
+byYear<-ddply(gasCars,~year,summarise,AvgMLG=mean(comb08),avgDspl=mean(displ))
+byYear2 <- melt(byYear,id="year")
+together <- ggplot(byYear2, aes(year, value)) + geom_point() + geom_smooth() + facet_wrap(~variable, ncol = 1, scales = "free_y") + xlab("Year") + ylab("")
+```
+
+```{r, echo=FALSE}
+plot(together)
+```

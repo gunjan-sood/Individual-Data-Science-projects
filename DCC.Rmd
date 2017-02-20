@@ -1,0 +1,104 @@
+---
+title: "Daily Celebrity Crossword Analysis"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r setup, include=FALSE,warning=F}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Analyzing user reviews on App store
+
+In this project I will be using dplyr and ggplot to analyze the sentiment of users playing DCC 
+
+## Step 1 - Import dataset and summarize data
+```{r echo=FALSE,warning=F}
+library(plyr)
+library(reshape2)
+library(ggplot2)
+library(tm)
+library(SnowballC)
+library(wordcloud)
+library(data.table)
+DCC_data <- read.csv("DCC.csv",header = T,stringsAsFactors = F)
+DCC_data$Date <- as.Date(DCC_data$Date,"%m/%d/%y")
+```
+
+```{r warning=FALSE}
+summary(DCC_data)
+str(DCC_data)
+```
+
+## Step 2: Calculate average rating by month
+```{r warning=F}
+AvgRating <- ddply(DCC_data,~Date,summarise,avgRating=mean(Rating))
+plotAvgRating <- ggplot(AvgRating,aes(Date,avgRating))+geom_point()+geom_smooth()+ggtitle("Avg Rating over 23 days")
+
+```
+
+
+```{r plotAvgRating, echo=FALSE,warning=F}
+plot(plotAvgRating)
+```
+
+## Step 3: Doing some sentiment analysis by Date
+```{r echo=F,warning=FALSE}
+DT=data.table(DCC_data)
+DCC_sentiment <- ddply(DT,~Date,summarise,
+              Positive=sum((Content %like% "Good" | Content %like% "like" |Content %like% "Fun"| Content %like% "fun" |
+              Content %like% "great" | Content %like% "love" |Content %like% "good"| Content %like% "Love" | Content %like% "fan"|
+              Content %like% "enjoy" | Content %like% "enjoyable" |Content %like% "Awesome"| Content %like% "Love") & Rating >=4),
+              
+              
+Addictive=sum((Content %like% "FAVORITE" | Content %like% "favorite" | Content %like% "Addictive" | Content %like% "ADDICTED"| Content %like% "best" 
+               | Content %like% "hook" | Content %like% "!!!" | Content %in% "love love" | Content %in% "daily")&Rating >=4 ),
+
+
+              Negative=sum((Content %like% "Delete" | Content %like% "unintalling" |Content %like% "hate"| Content %like% "terrible" | Content %like% "boring" |
+                Content %like% "crash" | Content %like% "crazy" | Content %like% "why" | Content %like% "refuse" | Content %like% "Bummer" | Content %like% "Horrible"
+                | Content %like% "horrible"| Content %like% "turn off") & Rating <3),
+              
+              
+              Neutral=sum((Content %like% "good but" | Content %like% "good,but" |Content %like% "wish"| Content %like% "however" | Content %like% "fun but" |
+               Content %like% "but") & Rating==3))
+```
+
+```{r echo=FALSE,warning=F}
+head(DCC_sentiment)
+```
+
+## Step 4: Analyzing trend of Postive vs Negative review side by side
+```{r warning=F}
+DCC_sentiment_melt <- melt(DCC_sentiment,id="Date")
+plotSentiment<-qplot(Date,value,data=DCC_sentiment_melt,geom="line",colour=variable,main = "Sentiment Analysis",ylab="# of reviews",xlab="Date")
+plotSentiment<- plotSentiment+scale_color_manual(values=c("#13ef5c", "#38d5ea", "#ed6868","#edbe68"))
+```
+
+```{r plotSentiment, echo=FALSE}
+plot(plotSentiment)
+```
+
+## Step 5: Analyze Rating trend
+```{r warning=F}
+count_rating <- ddply(DCC_data,.(Rating,Date),summarise,CountRating=length(Source))
+
+RatingTrend <- ggplot(count_rating,aes(Rating,CountRating,fill=Rating))+geom_bar(stat="identity")+geom_smooth()+facet_wrap(~Date)
+plot(RatingTrend)
+```
+
+
+##Step 6: Analyzing neutral and negative reviews by building a word cloud
+```{r warning=F}
+DCCNegative<-DCC_data[DCC_data$Rating<=2,]
+DCCCorpus <- Corpus(VectorSource(DCCNegative$Content))
+DCCCorpus <- tm_map(DCCCorpus, content_transformer(function(x) iconv(x, to='UTF-8-MAC', sub='byte')),mc.cores=1)
+DCCCorpus <- tm_map(DCCCorpus, PlainTextDocument)
+DCCCorpus <- tm_map(DCCCorpus, removePunctuation)
+DCCCorpus <- tm_map(DCCCorpus, removeWords, c('the', 'this', stopwords('english')))
+DCCCorpus <- tm_map(DCCCorpus, stemDocument)
+wordcloud(DCCCorpus, max.words = 100, random.order = FALSE,colors = brewer.pal(8, "Dark2"))
+```
+
+This analysis tells me that lot of users are unhappy about Coins specifically earning free coins. Plus they would like to see more than one puzzle
