@@ -1,6 +1,5 @@
 # Visual Analysis with Automobile data
-Aditya Kharbanda  
-`r format(Sys.Date())`  
+Gunjan Sood
 
 
 
