@@ -1,10 +1,7 @@
 ---
 title: "Visual Analysis with Automobile data"
-author: "Aditya Kharbanda"  
-date: "`r format(Sys.Date())`"
-output: 
-  html_document: 
-    keep_md: yes
+author: "Gunjan Sood"  
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
