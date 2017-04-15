@@ -8,37 +8,6 @@ In this project I will be using dplyr and ggplot to analyze the sentiment of use
 
 ## Step 1 - Import dataset and summarize data
 
-```
-## Loading required package: NLP
-```
-
-```
-## 
-## Attaching package: 'NLP'
-```
-
-```
-## The following object is masked from 'package:ggplot2':
-## 
-##     annotate
-```
-
-```
-## Loading required package: RColorBrewer
-```
-
-```
-## 
-## Attaching package: 'data.table'
-```
-
-```
-## The following objects are masked from 'package:reshape2':
-## 
-##     dcast, melt
-```
-
-
 ```r
 summary(DCC_data)
 ```
